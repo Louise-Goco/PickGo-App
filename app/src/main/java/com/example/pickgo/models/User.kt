@@ -10,7 +10,7 @@ data class User(
     val phoneNumber: String = "",
     val password: String = "",
     val userType: UserType = UserType.CUSTOMER,
-    val accountStatus: AccountStatus = AccountStatus.PENDING,
+    val accountStatus: AccountStatus = AccountStatus.ACTIVE,
     val isVerified: Boolean = false,
     val profilePhoto: String? = null,
     val displayName: String? = null,

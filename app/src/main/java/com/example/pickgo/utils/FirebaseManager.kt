@@ -73,12 +73,13 @@ class FirebaseManager {
             val docRef = db.collection("rider_applications").document(userId)
             docRef.set(completeApplication).await()
 
-            // Update user type to rider pending
-            db.collection("users").document(userId).update(
+            // Update user type to rider pending (use set with merge to handle non-existent documents)
+            db.collection("users").document(userId).set(
                 mapOf(
                     "userType" to UserType.RIDER.name,
                     "accountStatus" to AccountStatus.PENDING.name
-                )
+                ),
+                com.google.firebase.firestore.SetOptions.merge()
             ).await()
 
             Result.success(userId)
@@ -110,12 +111,13 @@ class FirebaseManager {
             val docRef = db.collection("seller_applications").document(userId)
             docRef.set(completeApplication).await()
 
-            // Update user type to seller pending
-            db.collection("users").document(userId).update(
+            // Update user type to seller pending (use set with merge to handle non-existent documents)
+            db.collection("users").document(userId).set(
                 mapOf(
                     "userType" to UserType.SELLER.name,
                     "accountStatus" to AccountStatus.PENDING.name
-                )
+                ),
+                com.google.firebase.firestore.SetOptions.merge()
             ).await()
 
             Result.success(userId)

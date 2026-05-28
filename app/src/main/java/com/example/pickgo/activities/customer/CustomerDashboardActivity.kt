@@ -10,6 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.snackbar.Snackbar
+import com.example.pickgo.activities.LoginActivity
 import com.example.pickgo.activities.RiderRegisterActivity
 import com.example.pickgo.activities.SellerRegisterActivity
 import com.example.pickgo.R
@@ -228,6 +229,9 @@ class CustomerDashboardActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     firebaseManager.logout()
                     sessionManager.clearSession()
+                    val intent = Intent(this@CustomerDashboardActivity, LoginActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
                     finishAffinity()
                 }
                 true

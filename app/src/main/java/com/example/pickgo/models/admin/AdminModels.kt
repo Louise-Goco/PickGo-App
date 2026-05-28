@@ -6,7 +6,7 @@ data class AdminUser(
     val lastName: String = "",
     val email: String = "",
     val phoneNumber: String = "",
-    val userType: String = "admin",
+    val userType: String = "ADMIN",
     val createdAt: String = ""
 )
 

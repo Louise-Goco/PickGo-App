@@ -11,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.example.pickgo.R
+import com.example.pickgo.activities.LoginActivity
 import com.example.pickgo.adapters.admin.AdminSectionAdapter
 import com.example.pickgo.adapters.admin.StatCardAdapter
 import com.example.pickgo.databinding.ActivityAdminDashboardBinding
@@ -234,6 +235,9 @@ class AdminDashboardActivity : AppCompatActivity() {
         lifecycleScope.launch {
             firebaseManager.logout()
             sessionManager.clearSession()
+            val intent = Intent(this@AdminDashboardActivity, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
             finishAffinity()
         }
     }

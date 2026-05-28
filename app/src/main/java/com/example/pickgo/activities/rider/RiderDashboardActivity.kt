@@ -1,6 +1,7 @@
 package com.example.pickgo.activities.rider
 
 import android.app.Dialog
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -17,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.pickgo.R
+import com.example.pickgo.activities.LoginActivity
 import com.google.android.material.snackbar.Snackbar
 import com.example.pickgo.adapters.rider.DeliveryTripAdapter
 import com.example.pickgo.databinding.ActivityRiderDashboardBinding
@@ -424,6 +426,9 @@ class RiderDashboardActivity : AppCompatActivity() {
         lifecycleScope.launch {
             firebaseManager.logout()
             sessionManager.clearSession()
+            val intent = Intent(this@RiderDashboardActivity, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
             finishAffinity()
         }
     }

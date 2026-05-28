@@ -14,11 +14,13 @@ import com.example.pickgo.R
 import com.example.pickgo.databinding.ActivityRiderRegisterBinding
 import com.example.pickgo.models.RiderApplication
 import com.example.pickgo.utils.FirebaseManager
+import com.example.pickgo.utils.SessionManager
 import kotlinx.coroutines.launch
 
 class RiderRegisterActivity : AppCompatActivity() {
     private lateinit var binding: ActivityRiderRegisterBinding
     private lateinit var firebaseManager: FirebaseManager
+    private lateinit var sessionManager: SessionManager
     
     private var licensePhotoUri: Uri? = null
     private var nbiClearanceUri: Uri? = null
@@ -65,8 +67,20 @@ class RiderRegisterActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         firebaseManager = FirebaseManager()
+        sessionManager = SessionManager(this)
         setupVehicleTypeSpinner()
         setupClickListeners()
+        autofillUserData()
+    }
+    
+    private fun autofillUserData() {
+        val currentUser = sessionManager.getSession()
+        if (currentUser != null) {
+            binding.firstNameInput.setText(currentUser.firstName)
+            binding.lastNameInput.setText(currentUser.lastName)
+            binding.emailInput.setText(currentUser.email)
+            binding.phoneInput.setText(currentUser.phoneNumber)
+        }
     }
 
     private fun setupVehicleTypeSpinner() {

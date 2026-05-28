@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -13,14 +14,33 @@ import com.example.pickgo.R
 import com.example.pickgo.databinding.ActivitySellerRegisterBinding
 import com.example.pickgo.models.SellerApplication
 import com.example.pickgo.utils.FirebaseManager
+import com.example.pickgo.utils.SessionManager
 import kotlinx.coroutines.launch
 
 class SellerRegisterActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySellerRegisterBinding
     private lateinit var firebaseManager: FirebaseManager
+    private lateinit var sessionManager: SessionManager
     
     private var govIdUri: Uri? = null
     private var birCertUri: Uri? = null
+    
+    // City and Barangay data
+    private val cityBarangayMap = mapOf(
+        "Cebu City" to listOf(
+            "Adlaon", "Agus", "Apolo", "Babag", "Bacayan", "Banilad", "Basak",
+            "Binaliw", "Bonifacio", "Budla-an", "Buhisan", "Busay", "Calamba",
+            "Cambinocot", "Capitol Site", "Carreta", "Central", "Cogon Pardo",
+            "Day-as", "Duljo-Fatima", "Ernesto A. Borromeo Sr.", "Guadalupe",
+            "Hipodromo", "Inayawan", "Kalunasan", "Kasambagan", "Labangon",
+            "Lahug", "Lorega San Miguel", "Luz", "Mabini", "Mabolo", "Malubog",
+            "Mambaling", "Pamutan", "Pangdan", "Pardo", "Pasil", "Pit-os",
+            "Poblacion", "Pulot", "Punta Princesa", "Sambag 1", "Sambag 2",
+            "San Nicolas Norte", "San Nicolas Sur", "Santa Cruz", "Sapangdako",
+            "Sirao", "Suba", "Sudlon 1", "Sudlon 2", "Tabunok", "T. Padilla",
+            "Tejero", "Tinago", "To-ong", "Zapatera"
+        )
+    )
 
     private val govIdPicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -44,7 +64,46 @@ class SellerRegisterActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         firebaseManager = FirebaseManager()
+        sessionManager = SessionManager(this)
+        setupDropdowns()
         setupClickListeners()
+        autofillUserData()
+    }
+    
+    private fun autofillUserData() {
+        val currentUser = sessionManager.getSession()
+        if (currentUser != null) {
+            binding.firstNameInput.setText(currentUser.firstName)
+            binding.lastNameInput.setText(currentUser.lastName)
+            binding.emailInput.setText(currentUser.email)
+            binding.phoneInput.setText(currentUser.phoneNumber)
+        }
+    }
+
+    private fun setupDropdowns() {
+        // Setup City Dropdown
+        val cities = cityBarangayMap.keys.toList()
+        val cityAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, cities)
+        binding.cityInput.setAdapter(cityAdapter)
+        
+        // Set default to Cebu City
+        if (cities.contains("Cebu City")) {
+            binding.cityInput.setText("Cebu City", false)
+            updateBarangayDropdown("Cebu City")
+        }
+        
+        // Listen for city selection changes
+        binding.cityInput.setOnItemClickListener { parent, view, position, id ->
+            val selectedCity = parent.getItemAtPosition(position).toString()
+            updateBarangayDropdown(selectedCity)
+        }
+    }
+    
+    private fun updateBarangayDropdown(city: String) {
+        val barangays = cityBarangayMap[city] ?: emptyList()
+        val barangayAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, barangays)
+        binding.barangayInput.setAdapter(barangayAdapter)
+        binding.barangayInput.setText("", false) // Clear previous selection
     }
 
     private fun setupClickListeners() {
@@ -223,14 +282,20 @@ class SellerRegisterActivity : AppCompatActivity() {
         binding.storeTypeInput.text?.clear()
         binding.storePhoneInput.text?.clear()
         binding.storeEmailInput.text?.clear()
-        binding.cityInput.text?.clear()
-        binding.barangayInput.text?.clear()
+        binding.cityInput.setText("", false)
+        binding.barangayInput.setText("", false)
         binding.streetNameInput.text?.clear()
         binding.termsCheckbox.isChecked = false
         binding.govIdStatus.visibility = View.GONE
         binding.birCertStatus.visibility = View.GONE
         govIdUri = null
         birCertUri = null
+        
+        // Reset dropdowns to default
+        if (cityBarangayMap.keys.contains("Cebu City")) {
+            binding.cityInput.setText("Cebu City", false)
+            updateBarangayDropdown("Cebu City")
+        }
     }
 
     private fun getFileName(uri: Uri?): String {

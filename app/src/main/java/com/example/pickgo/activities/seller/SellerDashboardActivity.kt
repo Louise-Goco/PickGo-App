@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.example.pickgo.R
+import com.example.pickgo.activities.LoginActivity
 import com.example.pickgo.activities.customer.CustomerDashboardActivity
 import com.example.pickgo.adapters.seller.OrderAdapter
 import com.example.pickgo.adapters.seller.StatCardAdapter
@@ -221,6 +222,9 @@ class SellerDashboardActivity : AppCompatActivity() {
         lifecycleScope.launch {
             firebaseManager.logout()
             sessionManager.clearSession()
+            val intent = Intent(this@SellerDashboardActivity, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
             finishAffinity()
         }
     }

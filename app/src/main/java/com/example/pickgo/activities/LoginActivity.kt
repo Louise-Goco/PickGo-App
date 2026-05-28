@@ -14,12 +14,14 @@ import com.example.pickgo.activities.seller.SellerDashboardActivity
 import com.google.android.material.snackbar.Snackbar
 import com.example.pickgo.databinding.ActivityLoginBinding
 import com.example.pickgo.utils.FirebaseManager
+import com.example.pickgo.utils.SessionManager
 import kotlinx.coroutines.launch
 
 class LoginActivity : AppCompatActivity() {
     private lateinit var binding: ActivityLoginBinding
     private lateinit var firebaseManager: FirebaseManager
     private lateinit var sharedPrefs: SharedPreferences
+    private lateinit var sessionManager: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,6 +30,7 @@ class LoginActivity : AppCompatActivity() {
 
         firebaseManager = FirebaseManager()
         sharedPrefs = getSharedPreferences("PickGoPrefs", Context.MODE_PRIVATE)
+        sessionManager = SessionManager(this)
 
         checkRememberedUser()
         setupClickListeners()
@@ -86,6 +89,9 @@ class LoginActivity : AppCompatActivity() {
                 val result = firebaseManager.login(email, password)
                 if (result.isSuccess) {
                     val user = result.getOrNull()!!
+                    
+                    // Save session with full user data
+                    sessionManager.saveSession(user)
 
                     // Save credentials if remember me is checked
                     if (binding.rememberCheckbox.isChecked) {

@@ -12,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.google.android.material.snackbar.Snackbar
 import com.example.pickgo.R
+import com.example.pickgo.activities.LoginActivity
 import com.example.pickgo.databinding.ActivityProfileBinding
 import com.example.pickgo.models.Address
 import com.example.pickgo.utils.FirebaseManager
@@ -304,6 +305,9 @@ class ProfileActivity : AppCompatActivity() {
         lifecycleScope.launch {
             firebaseManager.logout()
             sessionManager.clearSession()
+            val intent = Intent(this@ProfileActivity, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
             finishAffinity()
         }
     }
