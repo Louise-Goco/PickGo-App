@@ -54,6 +54,12 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     
+    // ViewPager2
+    implementation("androidx.viewpager2:viewpager2:1.0.0")
+    
+    // Fragment
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
+    
     // Firebase
     implementation(platform("com.google.firebase:firebase-bom:32.3.1"))
     implementation("com.google.firebase:firebase-auth")

@@ -253,35 +253,36 @@ class MenuCategoryFragment : androidx.fragment.app.Fragment() {
         inflater: android.view.LayoutInflater,
         container: android.view.ViewGroup?,
         savedInstanceState: android.os.Bundle?
-    ): android.view.View {
-        val recyclerView = androidx.recyclerview.widget.RecyclerView(requireContext()).apply {
-            layoutManager = androidx.recyclerview.widget.GridLayoutManager(context, 2)
-            adapter = ItemAdapter { item ->
-                // Add to cart logic
-                val cartManager = CartManager(requireContext())
-                val cartItem = CartItem(
-                    itemId = item.itemId,
-                    itemName = item.itemName,
-                    itemPrice = item.itemPrice,
-                    itemImage = item.itemImage,
-                    merchantName = item.merchantName,
-                    merchantId = item.merchantId,
-                    quantity = 1
-                )
-                cartManager.addItem(cartItem)
-                android.widget.Toast.makeText(context, "${item.itemName} added to cart", android.widget.Toast.LENGTH_SHORT).show()
-            }.also { adapter = it }
+    ): android.view.View? {
+        val rootView = inflater.inflate(R.layout.fragment_menu_category, container, false)
+        val recyclerView = rootView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.recyclerView)
+        
+        recyclerView.layoutManager = androidx.recyclerview.widget.GridLayoutManager(context, 2)
+        adapter = ItemAdapter { item ->
+            val cartManager = CartManager(requireContext())
+            val cartItem = CartItem(
+                itemId = item.itemId,
+                itemName = item.itemName,
+                itemPrice = item.itemPrice,
+                itemImage = item.itemImage,
+                merchantName = item.merchantName,
+                merchantId = item.merchantId,
+                quantity = 1
+            )
+            cartManager.addItem(cartItem)
+            android.widget.Toast.makeText(context, "${item.itemName} added to cart", android.widget.Toast.LENGTH_SHORT).show()
         }
+        recyclerView.adapter = adapter
 
         adapter.submitList(items)
-        return recyclerView
+        return rootView
     }
 
     companion object {
         fun newInstance(items: List<Item>): MenuCategoryFragment {
-            return MenuCategoryFragment().apply {
-                this.items = items
-            }
+            val fragment = MenuCategoryFragment()
+            fragment.items = items
+            return fragment
         }
     }
 }

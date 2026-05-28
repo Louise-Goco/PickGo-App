@@ -1,58 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:layout_height="match_parent">
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/ordersRecycler"
+        android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+        android:visibility="visible" />
 
-    <LinearLayout
-        android:id="@+id/emptyState"
+    <TextView
+        android:id="@+id/emptyView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
         android:gravity="center"
-        android:padding="60dp"
-        android:visibility="gone">
+        android:padding="100dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="16sp"
+        android:visibility="gone" />
 
-        <ImageView
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:src="@drawable/ic_orders"
-            app:tint="@color/text_secondary"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:id="@+id/emptyStateTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="No orders yet"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary" />
-
-        <TextView
-            android:id="@+id/emptyStateSubtitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Your orders will appear here"
-            android:textSize="14sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginTop="8dp" />
-
-        <Button
-            android:id="@+id/browseButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Browse Items"
-            android:backgroundTint="@color/accent_color"
-            android:layout_marginTop="20dp" />
-    </LinearLayout>
-
-</LinearLayout>
+</FrameLayout>

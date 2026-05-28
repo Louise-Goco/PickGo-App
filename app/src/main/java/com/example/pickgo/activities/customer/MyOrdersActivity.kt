@@ -131,46 +131,39 @@ class OrdersListFragment : androidx.fragment.app.Fragment() {
         inflater: android.view.LayoutInflater,
         container: android.view.ViewGroup?,
         savedInstanceState: android.os.Bundle?
-    ): android.view.View {
-        val recyclerView = androidx.recyclerview.widget.RecyclerView(requireContext()).apply {
-            layoutManager = androidx.recyclerview.widget.LinearLayoutManager(context)
-            adapter = OrderAdapter { order ->
-                val intent = Intent(context, TrackOrderActivity::class.java)
-                intent.putExtra("order_id", order.orderId)
-                startActivity(intent)
-            }.also { adapter = it }
+    ): android.view.View? {
+        val rootView = inflater.inflate(R.layout.fragment_orders_list, container, false)
+        val recyclerView = rootView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.recyclerView)
+        val emptyView = rootView.findViewById<android.widget.TextView>(R.id.emptyView)
+        
+        recyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(context)
+        adapter = OrderAdapter { order ->
+            val intent = Intent(context, TrackOrderActivity::class.java)
+            intent.putExtra("order_id", order.orderId)
+            startActivity(intent)
         }
+        recyclerView.adapter = adapter
 
         adapter.submitList(orders)
 
         if (orders.isEmpty()) {
-            val emptyView = android.widget.TextView(requireContext()).apply {
-                text = if (isActive) "No active orders" else "No order history"
-                textSize = 16f
-                setTextColor(requireContext().getColor(R.color.text_secondary))
-                gravity = android.view.Gravity.CENTER
-                setPadding(0, 100, 0, 100)
-            }
-
-            val container = LinearLayout(requireContext()).apply {
-                orientation = LinearLayout.VERTICAL
-                addView(recyclerView)
-                addView(emptyView)
-            }
-
+            emptyView.text = if (isActive) "No active orders" else "No order history"
+            emptyView.visibility = android.view.View.VISIBLE
             recyclerView.visibility = android.view.View.GONE
-            return container
+        } else {
+            emptyView.visibility = android.view.View.GONE
+            recyclerView.visibility = android.view.View.VISIBLE
         }
 
-        return recyclerView
+        return rootView
     }
 
     companion object {
         fun newInstance(orders: List<Order>, isActive: Boolean): OrdersListFragment {
-            return OrdersListFragment().apply {
-                this.orders = orders
-                this.isActive = isActive
-            }
+            val fragment = OrdersListFragment()
+            fragment.orders = orders
+            fragment.isActive = isActive
+            return fragment
         }
     }
 }

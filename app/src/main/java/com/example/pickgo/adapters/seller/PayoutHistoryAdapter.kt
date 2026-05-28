@@ -5,17 +5,17 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.pickgo.R
 import com.example.pickgo.databinding.ItemPayoutHistoryBinding
-import com.example.pickgo.models.seller.PayoutRequest
+import com.example.pickgo.models.seller.SellerPayout
 import com.example.pickgo.utils.PriceFormatter
 import java.text.SimpleDateFormat
 import java.util.*
 
 class PayoutHistoryAdapter : RecyclerView.Adapter<PayoutHistoryAdapter.PayoutHistoryViewHolder>() {
 
-    private var items: List<PayoutRequest> = emptyList()
+    private var items: List<SellerPayout> = emptyList()
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 
-    fun submitList(newItems: List<PayoutRequest>) {
+    fun submitList(newItems: List<SellerPayout>) {
         items = newItems
         notifyDataSetChanged()
     }
@@ -34,7 +34,7 @@ class PayoutHistoryAdapter : RecyclerView.Adapter<PayoutHistoryAdapter.PayoutHis
     inner class PayoutHistoryViewHolder(private val binding: ItemPayoutHistoryBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
-        fun bind(payout: PayoutRequest) {
+        fun bind(payout: SellerPayout) {
             binding.payoutDate.text = formatDate(payout.requestDate)
             binding.bankInfo.text = "${payout.bankName}\n${payout.accountName}"
             binding.payoutAmount.text = PriceFormatter.format(payout.amount)

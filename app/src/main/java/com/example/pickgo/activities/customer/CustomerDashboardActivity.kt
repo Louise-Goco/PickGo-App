@@ -10,6 +10,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.snackbar.Snackbar
+import com.example.pickgo.activities.RiderRegisterActivity
+import com.example.pickgo.activities.SellerRegisterActivity
 import com.example.pickgo.R
 import com.example.pickgo.adapters.ItemAdapter
 import com.example.pickgo.adapters.OrderAdapter
@@ -147,6 +149,14 @@ class CustomerDashboardActivity : AppCompatActivity() {
 
         binding.viewAllOrders.setOnClickListener {
             startActivity(Intent(this, MyOrdersActivity::class.java))
+        }
+
+        binding.becomeSellerCard.setOnClickListener {
+            startActivity(Intent(this, SellerRegisterActivity::class.java))
+        }
+
+        binding.driveWithUsCard.setOnClickListener {
+            startActivity(Intent(this, RiderRegisterActivity::class.java))
         }
     }
 

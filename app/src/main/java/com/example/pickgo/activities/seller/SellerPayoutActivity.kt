@@ -10,7 +10,7 @@ import com.example.pickgo.R
 import com.example.pickgo.adapters.seller.PayoutHistoryAdapter
 import com.example.pickgo.adapters.seller.RecentEarningsAdapter
 import com.example.pickgo.databinding.ActivitySellerPayoutsBinding
-import com.example.pickgo.models.seller.PayoutRequest
+import com.example.pickgo.models.seller.SellerPayout
 import com.example.pickgo.utils.FirebaseManager
 import com.example.pickgo.utils.PriceFormatter
 import com.example.pickgo.utils.SessionManager
@@ -82,7 +82,7 @@ class SellerPayoutsActivity : AppCompatActivity() {
     private fun loadBalanceAndEarnings() {
         lifecycleScope.launch {
             try {
-                val orders = firebaseManager.getOrderItems(sellerId)
+                val orders = firebaseManager.getSellerOrders(sellerId)
                 val payouts = firebaseManager.getSellerPayouts(sellerId)
 
                 val totalEarned = orders.filter { it.orderStatus == "delivered" }
@@ -102,10 +102,27 @@ class SellerPayoutsActivity : AppCompatActivity() {
                     .filter { it.orderStatus == "delivered" }
                     .sortedByDescending { it.orderDate }
                     .take(10)
+                    .map { order ->
+                        com.example.pickgo.models.seller.SellerOrder(
+                            id = order.id,
+                            orderId = order.orderId,
+                            customerId = order.customerId,
+                            sellerId = order.sellerId,
+                            merchantName = order.merchantName,
+                            customerName = "Customer",
+                            customerPhone = "",
+                            orderTotal = order.orderTotal,
+                            orderStatus = order.orderStatus,
+                            deliveryAddress = order.deliveryAddress,
+                            paymentMethod = order.paymentMethod,
+                            orderDate = order.orderDate.toString(),
+                            items = emptyList()
+                        )
+                    }
                 recentEarningsAdapter.submitList(recentOrders)
 
             } catch (e: Exception) {
-                // Handle error
+                Snackbar.make(binding.root, "Error loading earnings: ${e.message}", Snackbar.LENGTH_SHORT).show()
             }
         }
     }
@@ -114,24 +131,9 @@ class SellerPayoutsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val payouts = firebaseManager.getSellerPayouts(sellerId)
-                // Convert SellerPayout to PayoutRequest for adapter
-                val payoutRequests = payouts.map { payout ->
-                    PayoutRequest(
-                        id = payout.id,
-                        userId = payout.sellerId,
-                        userType = "seller",
-                        amount = payout.amount,
-                        bankName = payout.bankName,
-                        accountNumber = payout.accountNumber,
-                        accountName = payout.accountName,
-                        payoutStatus = payout.payoutStatus,
-                        requestDate = payout.requestDate
-                    )
-                }
-                val sortedPayouts = payoutRequests.sortedByDescending { it.requestDate }
-                payoutHistoryAdapter.submitList(sortedPayouts)
+                payoutHistoryAdapter.submitList(payouts.sortedByDescending { it.requestDate })
             } catch (e: Exception) {
-                // Handle error
+                Snackbar.make(binding.root, "Error loading payout history: ${e.message}", Snackbar.LENGTH_SHORT).show()
             }
         }
     }
@@ -177,9 +179,8 @@ class SellerPayoutsActivity : AppCompatActivity() {
             showLoading(true)
             try {
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                val payoutRequest = PayoutRequest(
-                    userId = sellerId,
-                    userType = "seller",
+                val payoutRequest = SellerPayout(
+                    sellerId = sellerId,
                     amount = amount,
                     bankName = bankName,
                     accountName = accountName,
@@ -188,7 +189,18 @@ class SellerPayoutsActivity : AppCompatActivity() {
                     requestDate = dateFormat.format(Date())
                 )
 
-                firebaseManager.createPayoutRequest(payoutRequest)
+                firebaseManager.createPayoutRequest(
+                    com.example.pickgo.models.seller.PayoutRequest(
+                        userId = sellerId,
+                        userType = "seller",
+                        amount = amount,
+                        bankName = bankName,
+                        accountName = accountName,
+                        accountNumber = accountNumber,
+                        payoutStatus = "pending",
+                        requestDate = dateFormat.format(Date())
+                    )
+                )
 
                 // Clear form
                 binding.amountInput.text?.clear()

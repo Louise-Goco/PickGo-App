@@ -40,6 +40,12 @@
             android:name=".activities.RegisterActivity"
             android:exported="false" />
         <activity
+            android:name=".activities.SellerRegisterActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.RiderRegisterActivity"
+            android:exported="false" />
+        <activity
             android:name=".activities.AdminSeedActivity"
             android:exported="false" />
 
