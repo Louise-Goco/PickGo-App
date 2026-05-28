@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Google Maps Permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.PickGo"
+        tools:targetApi="31">
+        
+        <!-- Google Maps API Key -->
+        <!-- TODO: Replace with your actual Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="YOUR_GOOGLE_MAPS_API_KEY_HERE" />
+        
+        <activity
+            android:name=".activities.LoginActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Auth Activities -->
+        <activity
+            android:name=".activities.RegisterActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.AdminSeedActivity"
+            android:exported="false" />
+
+        <!-- Admin Activities -->
+        <activity
+            android:name=".activities.admin.AdminDashboardActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.admin.ManageCategoriesActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.admin.ManageCustomersActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.admin.ManageOrdersActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.admin.ManagePayoutsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.admin.ManageProductsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.admin.ManageRidersActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.admin.ManageSellersActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.admin.SystemSettingsActivity"
+            android:exported="false" />
+
+        <!-- Customer Activities -->
+        <activity
+            android:name=".activities.customer.BrowseItemsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.customer.BrowseStoresActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.customer.CartActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.customer.CheckoutActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.customer.CustomerDashboardActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.customer.MyOrdersActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.customer.ProfileActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.customer.ReviewOrderActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.customer.TrackOrderActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.customer.ViewStoreActivity"
+            android:exported="false" />
+
+        <!-- Rider Activities -->
+        <activity
+            android:name=".activities.rider.DeliveryRequestsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.rider.OrderDetailsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.rider.NavigationActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.rider.RiderDashboardActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.rider.RiderEarningsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.rider.RiderProfileActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.rider.RiderReviewsActivity"
+            android:exported="false" />
+
+        <!-- Seller Activities -->
+        <activity
+            android:name=".activities.seller.ManageItemsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.seller.ManageOrdersActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.seller.SellerAnalyticsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.seller.SellerDashboardActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.seller.SellerPayoutsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.seller.SellerReviewsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.seller.StoreProfileActivity"
+            android:exported="false" />
+    </application>
+
+</manifest>

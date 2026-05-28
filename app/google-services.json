@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "229110399876",
+    "project_id": "pickup-3f95d",
+    "storage_bucket": "pickup-3f95d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:229110399876:android:763ca075e439e3984e93d1",
+        "android_client_info": {
+          "package_name": "com.example.intprogproject"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXzFtr9GXynJ6blbafjAI159l8DRQJ89k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:229110399876:android:1813e3018368ae804e93d1",
+        "android_client_info": {
+          "package_name": "com.example.pickgo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXzFtr9GXynJ6blbafjAI159l8DRQJ89k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

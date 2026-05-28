@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Theme Colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="bg_color">#f8fafc</color>
+    <color name="glass_bg">#ffffff</color>
+    <color name="text_primary">#0f172a</color>
+    <color name="text_secondary">#64748b</color>
+    <color name="accent_color">#f97316</color>
+    <color name="accent_hover">#ea580c</color>
+
+    <!-- Status Colors -->
+    <color name="error_bg">#fef2f2</color>
+    <color name="error_text">#ef4444</color>
+    <color name="error_border">#fca5a5</color>
+    <color name="success_bg">#f0fdf4</color>
+    <color name="success_text">#16a34a</color>
+    <color name="success_border">#86efac</color>
+
+    <!-- Input Colors -->
+    <color name="input_border">#cbd5e1</color>
+    <color name="input_placeholder">#94a3b8</color>
+
+    <!-- Button Secondary Colors -->
+    <color name="btn_secondary_bg">#ffffff</color>
+    <color name="btn_secondary_border">#e2e8f0</color>
+    <color name="btn_secondary_pressed">#f8fafc</color>
+    <color name="btn_secondary_border_pressed">#cbd5e1</color>
+
+    <!-- Additional Colors -->
+    <color name="ic_error_tint">#ef4444</color>
+    <color name="ic_success_tint">#16a34a</color>
+
+    <!-- Badge Colors -->
+    <color name="badge_processing_bg">#fef9c3</color>
+    <color name="badge_processing_text">#854d0e</color>
+    <color name="badge_delivery_bg">#dbeafe</color>
+    <color name="badge_delivery_text">#1e40af</color>
+    <color name="badge_completed_bg">#dcfce7</color>
+    <color name="badge_completed_text">#166534</color>
+    <color name="badge_cancelled_bg">#fee2e2</color>
+    <color name="badge_cancelled_text">#991b1b</color>
+
+    <!-- Rider Module Colors -->
+    <color name="primary_green">#10b981</color>
+    <color name="primary_green_light">#dcfce7</color>
+    <color name="primary_blue">#3b82f6</color>
+    <color name="primary_blue_light">#dbeafe</color>
+    <color name="star_yellow">#f59e0b</color>
+    <color name="warning_bg">#fffbeb</color>
+    <color name="warning_text">#92400e</color>
+    <color name="text_secondary_light">#cbd5e1</color>
+    <color name="accent_color_light">#fff7ed</color>
+</resources>

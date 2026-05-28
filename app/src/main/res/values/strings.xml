@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PickGo</string>
+    <string name="welcome">Welcome to PickGo</string>
+    <string name="sign_in">Sign In</string>
+    <string name="sign_up">Sign Up</string>
+    <string name="email">Email Address</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="first_name">First Name</string>
+    <string name="last_name">Last Name</string>
+    <string name="phone_number">Phone Number</string>
+    <string name="remember_me">Remember me</string>
+    <string name="forgot_password">Forgot password?</string>
+    <string name="no_account">Don\'t have an account?</string>
+    <string name="already_account">Already have an account?</string>
+    <string name="create_one">Create one</string>
+    <string name="create_account">Create Account</string>
+    <string name="join_us">Join us and start your journey</string>
+    <string name="drive_with_us">Drive with PickGo</string>
+    <string name="register_store">Register Your Store</string>
+    <string name="terms_conditions">I agree to the Terms &amp; Conditions</string>
+    <string name="submit_application">Submit Application</string>
+    <string name="next">Next</string>
+    <string name="back">Back</string>
+    <string name="email_required">Email is required</string>
+    <string name="password_required">Password is required</string>
+    <string name="passwords_no_match">Passwords do not match</string>
+    <string name="registration_success">Registration successful! You can now log in.</string>
+    <string name="login_failed">Invalid email or password.</string>
+    <string name="fill_all_fields">Please fill in all fields.</string>
+    <string name="agree_terms">You must agree to the terms and conditions.</string>
+    <!-- Customer Module Strings -->
+    <string name="browse_items">Browse Items</string>
+    <string name="browse_stores">Browse Stores</string>
+    <string name="my_orders">My Orders</string>
+    <string name="profile">Profile</string>
+    <string name="cart">Cart</string>
+    <string name="search">Search</string>
+    <string name="add_to_cart">Add to Cart</string>
+    <string name="checkout">Checkout</string>
+    <string name="delivery_fee">Delivery Fee</string>
+    <string name="subtotal">Subtotal</string>
+    <string name="total">Total</string>
+    <string name="promo_code">Promo Code</string>
+    <string name="apply">Apply</string>
+    <string name="remove">Remove</string>
+    <string name="order_placed_success">Order placed successfully!</string>
+    <string name="track_order">Track Order</string>
+    <string name="write_review">Write a Review</string>
+    <string name="empty_cart">Your cart is empty</string>
+    <string name="empty_orders">No orders found</string>
+    <string name="no_items_found">No items found</string>
+    <!-- Navigation Drawer Strings -->
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+</resources>
