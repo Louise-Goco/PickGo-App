@@ -36,7 +36,7 @@ class BrowseItemsActivity : AppCompatActivity() {
         binding = ActivityBrowseItemsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        firebaseManager = FirebaseManager()
+        firebaseManager = FirebaseManager(this)
         cartManager = CartManager(this)
         sessionManager = SessionManager(this)
 

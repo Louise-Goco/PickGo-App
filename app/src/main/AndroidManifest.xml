@@ -46,6 +46,12 @@
             android:name=".activities.RiderRegisterActivity"
             android:exported="false" />
         <activity
+            android:name=".activities.SellerLoginActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.RiderLoginActivity"
+            android:exported="false" />
+        <activity
             android:name=".activities.AdminSeedActivity"
             android:exported="false" />
 

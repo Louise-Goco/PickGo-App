@@ -20,7 +20,7 @@ class RegisterActivity : AppCompatActivity() {
         binding = ActivityRegisterBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        firebaseManager = FirebaseManager()
+        firebaseManager = FirebaseManager(this)
         setupClickListeners()
     }
 

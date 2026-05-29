@@ -31,7 +31,7 @@ class TrackOrderActivity : AppCompatActivity() {
         binding = ActivityTrackOrderBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        firebaseManager = FirebaseManager()
+        firebaseManager = FirebaseManager(this)
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)

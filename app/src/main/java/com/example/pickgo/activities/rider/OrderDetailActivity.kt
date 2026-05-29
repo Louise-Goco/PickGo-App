@@ -53,7 +53,7 @@ class OrderDetailsActivity : AppCompatActivity() {
         binding = ActivityOrderDetailsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        firebaseManager = FirebaseManager()
+        firebaseManager = FirebaseManager(this)
         sessionManager = SessionManager(this)
 
         orderId = intent.getStringExtra("order_id") ?: ""

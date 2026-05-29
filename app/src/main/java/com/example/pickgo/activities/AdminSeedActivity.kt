@@ -19,7 +19,7 @@ class AdminSeedActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_admin_seed)
 
-        firebaseManager = FirebaseManager()
+        firebaseManager = FirebaseManager(this)
         messageText = findViewById(R.id.messageText)
         createButton = findViewById(R.id.createButton)
 

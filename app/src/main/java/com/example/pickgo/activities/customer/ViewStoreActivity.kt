@@ -36,7 +36,7 @@ class ViewStoreActivity : AppCompatActivity() {
         binding = ActivityViewStoreBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        firebaseManager = FirebaseManager()
+        firebaseManager = FirebaseManager(this)
         cartManager = CartManager(this)
         sessionManager = SessionManager(this)
 

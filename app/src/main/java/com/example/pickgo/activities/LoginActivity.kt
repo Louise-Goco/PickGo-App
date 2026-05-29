@@ -28,7 +28,7 @@ class LoginActivity : AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        firebaseManager = FirebaseManager()
+        firebaseManager = FirebaseManager(this)
         sharedPrefs = getSharedPreferences("PickGoPrefs", Context.MODE_PRIVATE)
         sessionManager = SessionManager(this)
 
@@ -56,6 +56,22 @@ class LoginActivity : AppCompatActivity() {
 
         binding.createAccountBtn.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
+        }
+
+        binding.sellerLoginBtn.setOnClickListener {
+            startActivity(Intent(this, SellerLoginActivity::class.java))
+        }
+
+        binding.riderLoginBtn.setOnClickListener {
+            startActivity(Intent(this, RiderLoginActivity::class.java))
+        }
+
+        binding.sellerRegisterBtn.setOnClickListener {
+            startActivity(Intent(this, SellerRegisterActivity::class.java))
+        }
+
+        binding.riderRegisterBtn.setOnClickListener {
+            startActivity(Intent(this, RiderRegisterActivity::class.java))
         }
 
         binding.forgotPasswordBtn.setOnClickListener {

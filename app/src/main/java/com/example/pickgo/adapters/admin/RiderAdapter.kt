@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.pickgo.R
 import com.example.pickgo.databinding.ItemRiderBinding
+import com.example.pickgo.databinding.ItemSectionHeaderBinding
 import com.example.pickgo.models.admin.AdminRider
 
 class RiderAdapter(
@@ -16,22 +17,66 @@ class RiderAdapter(
     private val onVerify: (AdminRider) -> Unit,
     private val onDelete: (AdminRider) -> Unit,
     private val onViewDocuments: (AdminRider) -> Unit
-) : RecyclerView.Adapter<RiderAdapter.RiderViewHolder>() {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    private var items: List<AdminRider> = emptyList()
+    private val VIEW_TYPE_HEADER = 0
+    private val VIEW_TYPE_RIDER = 1
+
+    private var items: List<Any> = emptyList() // Can be String (header) or AdminRider
 
     fun submitList(newItems: List<AdminRider>) {
-        items = newItems
+        // Group by status and create sectioned list
+        val sectionedList = mutableListOf<Any>()
+        
+        val activeRiders = newItems.filter { it.riderStatus == "active" }
+        val pendingRiders = newItems.filter { it.riderStatus == "pending" }
+        val rejectedRiders = newItems.filter { it.riderStatus == "rejected" }
+        val suspendedRiders = newItems.filter { it.riderStatus == "suspended" }
+        
+        if (activeRiders.isNotEmpty()) {
+            sectionedList.add("ACTIVE")
+            sectionedList.addAll(activeRiders)
+        }
+        
+        if (pendingRiders.isNotEmpty()) {
+            sectionedList.add("PENDING")
+            sectionedList.addAll(pendingRiders)
+        }
+        
+        if (rejectedRiders.isNotEmpty()) {
+            sectionedList.add("REJECTED")
+            sectionedList.addAll(rejectedRiders)
+        }
+        
+        if (suspendedRiders.isNotEmpty()) {
+            sectionedList.add("SUSPENDED")
+            sectionedList.addAll(suspendedRiders)
+        }
+        
+        items = sectionedList
         notifyDataSetChanged()
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RiderViewHolder {
-        val binding = ItemRiderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return RiderViewHolder(binding)
+    override fun getItemViewType(position: Int): Int {
+        return if (items[position] is String) VIEW_TYPE_HEADER else VIEW_TYPE_RIDER
     }
 
-    override fun onBindViewHolder(holder: RiderViewHolder, position: Int) {
-        holder.bind(items[position])
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return if (viewType == VIEW_TYPE_HEADER) {
+            val binding = ItemSectionHeaderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            SectionHeaderViewHolder(binding)
+        } else {
+            val binding = ItemRiderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            RiderViewHolder(binding)
+        }
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        if (holder is SectionHeaderViewHolder) {
+            holder.bind(items[position] as String)
+        } else if (holder is RiderViewHolder) {
+            holder.bind(items[position] as AdminRider)
+        }
     }
 
     override fun getItemCount(): Int = items.size
@@ -130,6 +175,28 @@ class RiderAdapter(
                     binding.verifyBtn.visibility = android.view.View.GONE
                 }
             }
+        }
+    }
+
+    inner class SectionHeaderViewHolder(private val binding: ItemSectionHeaderBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(title: String) {
+            binding.sectionTitle.text = title
+            
+            // Count items in this section
+            val count = (items as List<Any>).filter { 
+                it is AdminRider && (it as AdminRider).riderStatus == title.lowercase() 
+            }.size
+            binding.sectionCount.text = "$count rider(s)"
+            
+            // Set color based on status
+            val colorRes = when (title) {
+                "ACTIVE" -> R.color.success_text
+                "PENDING" -> R.color.warning_text
+                "REJECTED" -> R.color.error_text
+                "SUSPENDED" -> R.color.error_text
+                else -> R.color.text_primary
+            }
+            binding.sectionTitle.setTextColor(binding.root.context.getColor(colorRes))
         }
     }
 }

@@ -7,6 +7,7 @@ data class User(
     val firstName: String = "",
     val lastName: String = "",
     val email: String = "",
+    val storeEmail: String? = null,  // For sellers - store email used for login
     val phoneNumber: String = "",
     val password: String = "",
     val userType: UserType = UserType.CUSTOMER,
@@ -31,6 +32,7 @@ data class RiderApplication(
     val lastName: String = "",
     val email: String = "",
     val phoneNumber: String = "",
+    val password: String = "",
     val vehicleType: String = "",
     val plateNumber: String = "",
     val licenseNumber: String = "",
@@ -38,6 +40,7 @@ data class RiderApplication(
     val nbiUrl: String? = null,
     val orUrl: String? = null,
     val crUrl: String? = null,
+    val userType: UserType = UserType.RIDER,
     val status: ApplicationStatus = ApplicationStatus.PENDING,
     val submittedAt: Date = Date()
 )
@@ -48,6 +51,7 @@ data class SellerApplication(
     val lastName: String = "",
     val email: String = "",
     val phoneNumber: String = "",
+    val password: String = "",
     val storeName: String = "",
     val storeType: String = "",
     val storePhone: String = "",
@@ -63,6 +67,7 @@ data class SellerApplication(
     val landmark: String = "",
     val govIdUrl: String? = null,
     val birCertUrl: String? = null,
+    val userType: UserType = UserType.SELLER,
     val status: ApplicationStatus = ApplicationStatus.PENDING,
     val submittedAt: Date = Date()
 )

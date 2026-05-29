@@ -30,7 +30,7 @@ class ManageProductsActivity : AppCompatActivity() {
         binding = ActivityManageProductsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        firebaseManager = FirebaseManager()
+        firebaseManager = FirebaseManager(this)
         sessionManager = SessionManager(this)
 
         setSupportActionBar(binding.toolbar)

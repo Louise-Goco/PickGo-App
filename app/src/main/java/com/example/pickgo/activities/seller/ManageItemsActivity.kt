@@ -50,7 +50,7 @@ class ManageItemsActivity : AppCompatActivity() {
         binding = ActivityManageItemsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        firebaseManager = FirebaseManager()
+        firebaseManager = FirebaseManager(this)
         sessionManager = SessionManager(this)
 
         setSupportActionBar(binding.toolbar)
@@ -78,19 +78,39 @@ class ManageItemsActivity : AppCompatActivity() {
     }
 
     private fun setupSpinners() {
-        val statuses = listOf("available", "pending", "out_of_stock")
+        // Setup Status Dropdown
+        val statuses = listOf("available", "out_of_stock")
         val statusAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, statuses)
-        (binding.statusSpinner as? android.widget.AutoCompleteTextView)?.setAdapter(statusAdapter)
+        binding.statusSpinner.setAdapter(statusAdapter)
+        binding.statusSpinner.setText("available", false)
+        
+        // Listen for status selection changes
+        binding.statusSpinner.setOnItemClickListener { parent, view, position, id ->
+            // Status selected
+        }
     }
 
     private fun loadCategories() {
         lifecycleScope.launch {
             try {
                 categories = firebaseManager.getCategoryNames()
-                val categoryAdapter = ArrayAdapter(this@ManageItemsActivity, android.R.layout.simple_dropdown_item_1line, categories)
-                (binding.categorySpinner as? android.widget.AutoCompleteTextView)?.setAdapter(categoryAdapter)
+                if (categories.isEmpty()) {
+                    categories = listOf("No categories available")
+                }
+                
+                val categoryAdapter = ArrayAdapter(
+                    this@ManageItemsActivity, 
+                    android.R.layout.simple_dropdown_item_1line, 
+                    categories
+                )
+                binding.categorySpinner.setAdapter(categoryAdapter)
+                
+                // Listen for category selection changes
+                binding.categorySpinner.setOnItemClickListener { parent, view, position, id ->
+                    // Category selected
+                }
             } catch (e: Exception) {
-                // Handle error
+                Snackbar.make(binding.root, "Error loading categories: ${e.message}", Snackbar.LENGTH_SHORT).show()
             }
         }
     }
@@ -152,10 +172,10 @@ class ManageItemsActivity : AppCompatActivity() {
 
     private fun saveItem() {
         val itemName = binding.itemNameInput.text.toString().trim()
-        val category = (binding.categorySpinner as? android.widget.AutoCompleteTextView)?.text.toString()
+        val category = binding.categorySpinner.text.toString().trim()
         val priceStr = binding.priceInput.text.toString().trim()
         val description = binding.descriptionInput.text.toString().trim()
-        val status = (binding.statusSpinner as? android.widget.AutoCompleteTextView)?.text.toString()
+        val status = binding.statusSpinner.text.toString().trim()
 
         if (itemName.isEmpty()) {
             Snackbar.make(binding.root, "Please enter item name", Snackbar.LENGTH_SHORT).show()
@@ -183,7 +203,7 @@ class ManageItemsActivity : AppCompatActivity() {
             try {
                 var imageUrl = existingImageUrl
                 if (selectedImageUri != null) {
-                    imageUrl = firebaseManager.uploadItemImage(sellerId, selectedImageUri!!)
+                    imageUrl = firebaseManager.uploadItemImage(sellerId, category, selectedImageUri!!)
                 }
 
                 val item = SellerItem(
@@ -230,10 +250,10 @@ class ManageItemsActivity : AppCompatActivity() {
 
         binding.formTitle.text = "Edit Product"
         binding.itemNameInput.setText(item.itemName)
-        (binding.categorySpinner as? android.widget.AutoCompleteTextView)?.setText(item.itemCategory, false)
+        binding.categorySpinner.setText(item.itemCategory, false)
         binding.priceInput.setText(item.itemPrice.toString())
         binding.descriptionInput.setText(item.itemDescription)
-        (binding.statusSpinner as? android.widget.AutoCompleteTextView)?.setText(item.itemStatus, false)
+        binding.statusSpinner.setText(item.itemStatus, false)
 
         item.itemImage?.let { imageUrl ->
             Glide.with(this).load(imageUrl).into(binding.imagePreview)
@@ -281,10 +301,10 @@ class ManageItemsActivity : AppCompatActivity() {
 
         binding.formTitle.text = "Add New Product"
         binding.itemNameInput.text?.clear()
-        (binding.categorySpinner as? android.widget.AutoCompleteTextView)?.text?.clear()
+        binding.categorySpinner.setText("", false)
         binding.priceInput.text?.clear()
         binding.descriptionInput.text?.clear()
-        (binding.statusSpinner as? android.widget.AutoCompleteTextView)?.setText("available", false)
+        binding.statusSpinner.setText("available", false)
         binding.imagePreview.visibility = View.GONE
         binding.cancelEditBtn.visibility = View.GONE
         binding.saveItemBtn.text = "Save Product"

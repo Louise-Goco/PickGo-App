@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
+import com.example.pickgo.R
 import com.example.pickgo.adapters.admin.SellerAdapter
 import com.example.pickgo.databinding.ActivityManageSellersBinding
 import com.example.pickgo.databinding.DialogEditSellerBinding
@@ -24,13 +25,15 @@ class ManageSellersActivity : AppCompatActivity() {
     private lateinit var sessionManager: SessionManager
     private lateinit var sellerAdapter: SellerAdapter
     private var allSellers: List<AdminSeller> = emptyList()
+    private var filteredSellers: List<AdminSeller> = emptyList()
+    private var currentFilter: String = "all"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityManageSellersBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        firebaseManager = FirebaseManager()
+        firebaseManager = FirebaseManager(this)
         sessionManager = SessionManager(this)
 
         setSupportActionBar(binding.toolbar)
@@ -39,6 +42,7 @@ class ManageSellersActivity : AppCompatActivity() {
 
         setupRecyclerView()
         setupSearch()
+        setupStatusFilters()
         loadSellers()
     }
 
@@ -74,10 +78,57 @@ class ManageSellersActivity : AppCompatActivity() {
         binding.searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                filterSellers(s.toString())
+                applyFilters()
             }
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
+    }
+
+    private fun setupStatusFilters() {
+        binding.statusFilterGroup.setOnCheckedChangeListener { group, checkedId ->
+            currentFilter = when (checkedId) {
+                R.id.filterAllChip -> "all"
+                R.id.filterPendingChip -> "pending"
+                R.id.filterApprovedChip -> "active"
+                R.id.filterRejectedChip -> "rejected"
+                R.id.filterSuspendedChip -> "suspended"
+                else -> "all"
+            }
+            applyFilters()
+        }
+    }
+
+    private fun applyFilters() {
+        val searchQuery = binding.searchInput.text.toString().trim()
+        
+        filteredSellers = allSellers.filter { seller ->
+            var matchesStatus = when (currentFilter) {
+                "all" -> true
+                else -> seller.sellerStatus == currentFilter
+            }
+            
+            var matchesSearch = if (searchQuery.isEmpty()) {
+                true
+            } else {
+                "${seller.firstName} ${seller.lastName}".contains(searchQuery, ignoreCase = true) ||
+                    seller.email.contains(searchQuery, ignoreCase = true) ||
+                    seller.merchantName.contains(searchQuery, ignoreCase = true)
+            }
+            
+            matchesStatus && matchesSearch
+        }
+        
+        sellerAdapter.submitList(filteredSellers)
+        
+        if (filteredSellers.isEmpty()) {
+            binding.emptyState.visibility = View.VISIBLE
+            binding.sellersRecycler.visibility = View.GONE
+        } else {
+            binding.emptyState.visibility = View.GONE
+            binding.sellersRecycler.visibility = View.VISIBLE
+        }
+        
+        updateStats()
     }
 
     private fun loadSellers() {
@@ -86,15 +137,18 @@ class ManageSellersActivity : AppCompatActivity() {
             try {
                 allSellers = firebaseManager.getAllSellersWithMerchants()
                 allSellers = allSellers.sortedByDescending { it.createdAt }
-                sellerAdapter.submitList(allSellers)
+                filteredSellers = allSellers
+                sellerAdapter.submitList(filteredSellers)
 
-                if (allSellers.isEmpty()) {
+                if (filteredSellers.isEmpty()) {
                     binding.emptyState.visibility = View.VISIBLE
                     binding.sellersRecycler.visibility = View.GONE
                 } else {
                     binding.emptyState.visibility = View.GONE
                     binding.sellersRecycler.visibility = View.VISIBLE
                 }
+                
+                updateStats()
             } catch (e: Exception) {
                 Snackbar.make(binding.root, "Error loading sellers: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
@@ -103,17 +157,16 @@ class ManageSellersActivity : AppCompatActivity() {
         }
     }
 
-    private fun filterSellers(query: String) {
-        if (query.isEmpty()) {
-            sellerAdapter.submitList(allSellers)
-            return
-        }
-        val filtered = allSellers.filter {
-            "${it.firstName} ${it.lastName}".contains(query, ignoreCase = true) ||
-                    it.email.contains(query, ignoreCase = true) ||
-                    it.merchantName.contains(query, ignoreCase = true)
-        }
-        sellerAdapter.submitList(filtered)
+    private fun updateStats() {
+        val totalCount = allSellers.size
+        val activeCount = allSellers.count { it.sellerStatus == "active" }
+        val pendingCount = allSellers.count { it.sellerStatus == "pending" }
+        val suspendedCount = allSellers.count { it.sellerStatus == "suspended" }
+        
+        binding.totalSellers.text = totalCount.toString()
+        binding.activeSellers.text = activeCount.toString()
+        binding.pendingSellers.text = pendingCount.toString()
+        binding.suspendedSellers.text = suspendedCount.toString()
     }
 
     private fun showEditSellerDialog(seller: AdminSeller) {
@@ -230,10 +283,14 @@ class ManageSellersActivity : AppCompatActivity() {
         lifecycleScope.launch {
             showLoading(true)
             try {
-                firebaseManager.updateSeller(seller.id, mapOf("Sellr_Status" to sellerStatus))
-                firebaseManager.updateMerchant(seller.merchantId, mapOf("Merch_Status" to merchantStatus))
-                Snackbar.make(binding.root, "Seller ${if (sellerStatus == "active") "approved" else sellerStatus}", Snackbar.LENGTH_SHORT).show()
-                loadSellers()
+                // Use the new updateSellerStatus method that updates both application and user
+                val result = firebaseManager.updateSellerStatus(seller.id, sellerStatus)
+                if (result.isSuccess) {
+                    Snackbar.make(binding.root, "Seller ${if (sellerStatus == "active") "approved" else sellerStatus}", Snackbar.LENGTH_SHORT).show()
+                    loadSellers()
+                } else {
+                    Snackbar.make(binding.root, "Error: ${result.exceptionOrNull()?.message}", Snackbar.LENGTH_SHORT).show()
+                }
             } catch (e: Exception) {
                 Snackbar.make(binding.root, "Error: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {

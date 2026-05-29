@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
+import com.example.pickgo.R
 import com.example.pickgo.adapters.admin.RiderAdapter
 import com.example.pickgo.databinding.ActivityManageRidersBinding
 import com.example.pickgo.databinding.DialogEditRiderBinding
@@ -24,13 +25,15 @@ class ManageRidersActivity : AppCompatActivity() {
     private lateinit var sessionManager: SessionManager
     private lateinit var riderAdapter: RiderAdapter
     private var allRiders: List<AdminRider> = emptyList()
+    private var filteredRiders: List<AdminRider> = emptyList()
+    private var currentFilter: String = "all"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityManageRidersBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        firebaseManager = FirebaseManager()
+        firebaseManager = FirebaseManager(this)
         sessionManager = SessionManager(this)
 
         setSupportActionBar(binding.toolbar)
@@ -39,6 +42,7 @@ class ManageRidersActivity : AppCompatActivity() {
 
         setupRecyclerView()
         setupSearch()
+        setupStatusFilters()
         loadRiders()
     }
 
@@ -77,10 +81,57 @@ class ManageRidersActivity : AppCompatActivity() {
         binding.searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                filterRiders(s.toString())
+                applyFilters()
             }
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
+    }
+
+    private fun setupStatusFilters() {
+        binding.statusFilterGroup.setOnCheckedChangeListener { group, checkedId ->
+            currentFilter = when (checkedId) {
+                R.id.filterAllChip -> "all"
+                R.id.filterPendingChip -> "pending"
+                R.id.filterApprovedChip -> "active"
+                R.id.filterRejectedChip -> "rejected"
+                R.id.filterSuspendedChip -> "suspended"
+                else -> "all"
+            }
+            applyFilters()
+        }
+    }
+
+    private fun applyFilters() {
+        val searchQuery = binding.searchInput.text.toString().trim()
+        
+        filteredRiders = allRiders.filter { rider ->
+            var matchesStatus = when (currentFilter) {
+                "all" -> true
+                else -> rider.riderStatus == currentFilter
+            }
+            
+            var matchesSearch = if (searchQuery.isEmpty()) {
+                true
+            } else {
+                "${rider.firstName} ${rider.lastName}".contains(searchQuery, ignoreCase = true) ||
+                    rider.email.contains(searchQuery, ignoreCase = true) ||
+                    rider.plateNumber.contains(searchQuery, ignoreCase = true)
+            }
+            
+            matchesStatus && matchesSearch
+        }
+        
+        riderAdapter.submitList(filteredRiders)
+        
+        if (filteredRiders.isEmpty()) {
+            binding.emptyState.visibility = View.VISIBLE
+            binding.ridersRecycler.visibility = View.GONE
+        } else {
+            binding.emptyState.visibility = View.GONE
+            binding.ridersRecycler.visibility = View.VISIBLE
+        }
+        
+        updateStats()
     }
 
     private fun loadRiders() {
@@ -89,15 +140,18 @@ class ManageRidersActivity : AppCompatActivity() {
             try {
                 allRiders = firebaseManager.getAllRidersWithDocuments()
                 allRiders = allRiders.sortedByDescending { it.createdAt }
-                riderAdapter.submitList(allRiders)
+                filteredRiders = allRiders
+                riderAdapter.submitList(filteredRiders)
 
-                if (allRiders.isEmpty()) {
+                if (filteredRiders.isEmpty()) {
                     binding.emptyState.visibility = View.VISIBLE
                     binding.ridersRecycler.visibility = View.GONE
                 } else {
                     binding.emptyState.visibility = View.GONE
                     binding.ridersRecycler.visibility = View.VISIBLE
                 }
+                
+                updateStats()
             } catch (e: Exception) {
                 Snackbar.make(binding.root, "Error loading riders: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
@@ -106,17 +160,15 @@ class ManageRidersActivity : AppCompatActivity() {
         }
     }
 
-    private fun filterRiders(query: String) {
-        if (query.isEmpty()) {
-            riderAdapter.submitList(allRiders)
-            return
-        }
-        val filtered = allRiders.filter {
-            "${it.firstName} ${it.lastName}".contains(query, ignoreCase = true) ||
-                    it.email.contains(query, ignoreCase = true) ||
-                    it.plateNumber.contains(query, ignoreCase = true)
-        }
-        riderAdapter.submitList(filtered)
+    private fun updateStats() {
+        val totalCount = allRiders.size
+        val activeCount = allRiders.count { it.riderStatus == "active" }
+        val pendingCount = allRiders.count { it.riderStatus == "pending" }
+        val suspendedCount = allRiders.count { it.riderStatus == "suspended" }
+        
+        binding.totalRiders.text = totalCount.toString()
+        binding.activeRiders.text = activeCount.toString()
+        binding.pendingRiders.text = pendingCount.toString()
     }
 
     private fun showEditRiderDialog(rider: AdminRider) {
@@ -246,12 +298,14 @@ class ManageRidersActivity : AppCompatActivity() {
         lifecycleScope.launch {
             showLoading(true)
             try {
-                firebaseManager.updateRider(rider.id, mapOf(
-                    "Rider_Status" to status,
-                    "Rider_Verified" to verified
-                ))
-                Snackbar.make(binding.root, "Rider ${if (status == "active") "approved" else status}", Snackbar.LENGTH_SHORT).show()
-                loadRiders()
+                // Use the new updateRiderStatus method that updates both application and user
+                val result = firebaseManager.updateRiderStatus(rider.id, status)
+                if (result.isSuccess) {
+                    Snackbar.make(binding.root, "Rider ${if (status == "active") "approved" else status}", Snackbar.LENGTH_SHORT).show()
+                    loadRiders()
+                } else {
+                    Snackbar.make(binding.root, "Error: ${result.exceptionOrNull()?.message}", Snackbar.LENGTH_SHORT).show()
+                }
             } catch (e: Exception) {
                 Snackbar.make(binding.root, "Error: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {

@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.pickgo.R
 import com.example.pickgo.databinding.ItemSellerBinding
+import com.example.pickgo.databinding.ItemSectionHeaderBinding
 import com.example.pickgo.models.admin.AdminSeller
 import java.text.SimpleDateFormat
 import java.util.*
@@ -17,22 +18,66 @@ class SellerAdapter(
     private val onActivate: (AdminSeller) -> Unit,
     private val onDelete: (AdminSeller) -> Unit,
     private val onViewDocuments: (AdminSeller) -> Unit
-) : RecyclerView.Adapter<SellerAdapter.SellerViewHolder>() {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    private var items: List<AdminSeller> = emptyList()
+    private val VIEW_TYPE_HEADER = 0
+    private val VIEW_TYPE_SELLER = 1
+
+    private var items: List<Any> = emptyList() // Can be String (header) or AdminSeller
 
     fun submitList(newItems: List<AdminSeller>) {
-        items = newItems
+        // Group by status and create sectioned list
+        val sectionedList = mutableListOf<Any>()
+        
+        val activeSellers = newItems.filter { it.sellerStatus == "active" }
+        val pendingSellers = newItems.filter { it.sellerStatus == "pending" }
+        val rejectedSellers = newItems.filter { it.sellerStatus == "rejected" }
+        val suspendedSellers = newItems.filter { it.sellerStatus == "suspended" }
+        
+        if (activeSellers.isNotEmpty()) {
+            sectionedList.add("ACTIVE")
+            sectionedList.addAll(activeSellers)
+        }
+        
+        if (pendingSellers.isNotEmpty()) {
+            sectionedList.add("PENDING")
+            sectionedList.addAll(pendingSellers)
+        }
+        
+        if (rejectedSellers.isNotEmpty()) {
+            sectionedList.add("REJECTED")
+            sectionedList.addAll(rejectedSellers)
+        }
+        
+        if (suspendedSellers.isNotEmpty()) {
+            sectionedList.add("SUSPENDED")
+            sectionedList.addAll(suspendedSellers)
+        }
+        
+        items = sectionedList
         notifyDataSetChanged()
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SellerViewHolder {
-        val binding = ItemSellerBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return SellerViewHolder(binding)
+    override fun getItemViewType(position: Int): Int {
+        return if (items[position] is String) VIEW_TYPE_HEADER else VIEW_TYPE_SELLER
     }
 
-    override fun onBindViewHolder(holder: SellerViewHolder, position: Int) {
-        holder.bind(items[position])
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return if (viewType == VIEW_TYPE_HEADER) {
+            val binding = ItemSectionHeaderBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            SectionHeaderViewHolder(binding)
+        } else {
+            val binding = ItemSellerBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            SellerViewHolder(binding)
+        }
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        if (holder is SectionHeaderViewHolder) {
+            holder.bind(items[position] as String)
+        } else if (holder is SellerViewHolder) {
+            holder.bind(items[position] as AdminSeller)
+        }
     }
 
     override fun getItemCount(): Int = items.size
@@ -127,6 +172,28 @@ class SellerAdapter(
             } catch (e: Exception) {
                 dateString
             }
+        }
+    }
+
+    inner class SectionHeaderViewHolder(private val binding: ItemSectionHeaderBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(title: String) {
+            binding.sectionTitle.text = title
+            
+            // Count items in this section
+            val count = (items as List<Any>).filter { 
+                it is AdminSeller && (it as AdminSeller).sellerStatus == title.lowercase() 
+            }.size
+            binding.sectionCount.text = "$count seller(s)"
+            
+            // Set color based on status
+            val colorRes = when (title) {
+                "ACTIVE" -> R.color.success_text
+                "PENDING" -> R.color.warning_text
+                "REJECTED" -> R.color.error_text
+                "SUSPENDED" -> R.color.error_text
+                else -> R.color.text_primary
+            }
+            binding.sectionTitle.setTextColor(binding.root.context.getColor(colorRes))
         }
     }
 }

@@ -31,7 +31,7 @@ class SellerAnalyticsActivity : AppCompatActivity() {
         binding = ActivitySellerAnalyticsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        firebaseManager = FirebaseManager()
+        firebaseManager = FirebaseManager(this)
         sessionManager = SessionManager(this)
 
         setSupportActionBar(binding.toolbar)

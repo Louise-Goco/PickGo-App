@@ -1,30 +1,58 @@
 package com.example.pickgo.utils
 
+import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageMetadata
 import com.example.pickgo.models.*
 import com.example.pickgo.models.admin.*
 import kotlinx.coroutines.tasks.await
 import java.util.Date
 
-class FirebaseManager {
+class FirebaseManager(private val context: Context) {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
     private val storage = FirebaseStorage.getInstance().reference
 
     suspend fun login(email: String, password: String): Result<User> {
         return try {
-            val authResult = auth.signInWithEmailAndPassword(email, password).await()
-            val userId = authResult.user?.uid ?: return Result.failure(Exception("Authentication failed"))
+            // First, try to find if this email belongs to a seller's store email
+            val sellerQuery = db.collection("users")
+                .whereEqualTo("storeEmail", email)
+                .whereEqualTo("userType", "SELLER")
+                .limit(1)
+                .get()
+                .await()
+            
+            val userId = if (!sellerQuery.isEmpty) {
+                // Found seller by store email, use their auth email
+                val sellerDoc = sellerQuery.documents[0]
+                val sellerAuthEmail = sellerDoc.getString("email").orEmpty()
+                if (sellerAuthEmail.isEmpty()) {
+                    return Result.failure(Exception("Seller account configuration error"))
+                }
+                android.util.Log.d("FirebaseAuth", "Login attempt with store email, using auth email: $sellerAuthEmail")
+                
+                // Sign in with the auth email (personal email)
+                val authResult = auth.signInWithEmailAndPassword(sellerAuthEmail, password).await()
+                authResult.user?.uid ?: return Result.failure(Exception("Authentication failed"))
+            } else {
+                // Not a store email, try direct login with provided email
+                android.util.Log.d("FirebaseAuth", "Direct login attempt with email: $email")
+                val authResult = auth.signInWithEmailAndPassword(email, password).await()
+                authResult.user?.uid ?: return Result.failure(Exception("Authentication failed"))
+            }
 
             val userDoc = db.collection("users").document(userId).get().await()
             val user = userDoc.toObject(User::class.java) ?: return Result.failure(Exception("User data not found"))
 
             Result.success(user)
         } catch (e: Exception) {
+            android.util.Log.e("FirebaseAuth", "Login failed: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -48,17 +76,50 @@ class FirebaseManager {
         }
     }
 
-    suspend fun submitRiderApplication(application: RiderApplication, files: Map<String, Uri>): Result<String> {
+    suspend fun submitRiderApplication(application: RiderApplication, files: Map<String, Uri>, password: String? = null): Result<String> {
         return try {
-            val userId = auth.currentUser?.uid ?: return Result.failure(Exception("User not logged in"))
+            var userId = auth.currentUser?.uid
+            android.util.Log.d("FirebaseAuth", "Current user before: $userId")
+            
+            // Create auth account if user doesn't exist yet
+            if (userId == null && password != null) {
+                android.util.Log.d("FirebaseAuth", "Creating new user account...")
+                val authResult = auth.createUserWithEmailAndPassword(application.email, password).await()
+                userId = authResult.user?.uid
+                android.util.Log.d("FirebaseAuth", "User created successfully: $userId")
+                
+                if (userId == null) {
+                    return Result.failure(Exception("Failed to create user account"))
+                }
+                
+                // Wait a moment for auth state to sync
+                kotlinx.coroutines.delay(500)
+                
+                // Verify user is now authenticated
+                val currentUser = auth.currentUser
+                if (currentUser == null || currentUser.uid != userId) {
+                    android.util.Log.e("FirebaseAuth", "Auth state not synced after creation")
+                    return Result.failure(Exception("Authentication failed. Please try again."))
+                }
+                android.util.Log.d("FirebaseAuth", "Auth state verified: ${currentUser.uid}")
+            } else if (userId == null) {
+                return Result.failure(Exception("User not logged in and no password provided"))
+            }
+            
+            // Ensure userId is valid before proceeding
+            if (userId.isEmpty()) {
+                return Result.failure(Exception("Invalid user ID"))
+            }
+            
+            android.util.Log.d("FirebaseAuth", "Proceeding with registration for userId: $userId")
 
-            // Upload files
+            // Upload files - SKIPPED: Firebase Storage requires Blaze plan
+            // Using placeholder URLs instead for development/testing
             val fileUrls = mutableMapOf<String, String>()
             for ((key, uri) in files) {
-                val fileRef = storage.child("rider_applications/$userId/$key")
-                fileRef.putFile(uri).await()
-                val url = fileRef.downloadUrl.await().toString()
-                fileUrls[key] = url
+                android.util.Log.d("FirebaseStorage", "Skipping upload for: $key (Storage requires Blaze plan)")
+                // Use placeholder URL instead of actual upload
+                fileUrls[key] = "placeholder_url_${key}_${userId}"
             }
 
             val completeApplication = application.copy(
@@ -73,14 +134,37 @@ class FirebaseManager {
             val docRef = db.collection("rider_applications").document(userId)
             docRef.set(completeApplication).await()
 
-            // Update user type to rider pending (use set with merge to handle non-existent documents)
-            db.collection("users").document(userId).set(
-                mapOf(
-                    "userType" to UserType.RIDER.name,
-                    "accountStatus" to AccountStatus.PENDING.name
-                ),
-                com.google.firebase.firestore.SetOptions.merge()
-            ).await()
+            // Hash password if provided
+            val hashedPassword = password?.let { PasswordHasher.hashPassword(it) } ?: ""
+
+            // Check if user document exists
+            val userDocRef = db.collection("users").document(userId)
+            val userDoc = userDocRef.get().await()
+            
+            if (userDoc.exists()) {
+                // Update existing user document
+                userDocRef.update(
+                    mapOf<String, Any>(
+                        "userType" to UserType.RIDER.name,
+                        "accountStatus" to AccountStatus.PENDING.name
+                    )
+                ).await()
+            } else {
+                // Create new user document
+                userDocRef.set(
+                    mapOf<String, Any>(
+                        "firstName" to application.firstName,
+                        "lastName" to application.lastName,
+                        "email" to application.email,
+                        "phoneNumber" to application.phoneNumber,
+                        "password" to hashedPassword,
+                        "userType" to UserType.RIDER.name,
+                        "accountStatus" to AccountStatus.PENDING.name,
+                        "isVerified" to false,
+                        "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    )
+                ).await()
+            }
 
             Result.success(userId)
         } catch (e: Exception) {
@@ -88,17 +172,50 @@ class FirebaseManager {
         }
     }
 
-    suspend fun submitSellerApplication(application: SellerApplication, files: Map<String, Uri>): Result<String> {
+    suspend fun submitSellerApplication(application: SellerApplication, files: Map<String, Uri>, password: String? = null): Result<String> {
         return try {
-            val userId = auth.currentUser?.uid ?: return Result.failure(Exception("User not logged in"))
+            var userId = auth.currentUser?.uid
+            android.util.Log.d("FirebaseAuth", "Current user before: $userId")
+            
+            // Create auth account if user doesn't exist yet
+            if (userId == null && password != null) {
+                android.util.Log.d("FirebaseAuth", "Creating new user account...")
+                val authResult = auth.createUserWithEmailAndPassword(application.email, password).await()
+                userId = authResult.user?.uid
+                android.util.Log.d("FirebaseAuth", "User created successfully: $userId")
+                
+                if (userId == null) {
+                    return Result.failure(Exception("Failed to create user account"))
+                }
+                
+                // Wait a moment for auth state to sync
+                kotlinx.coroutines.delay(500)
+                
+                // Verify user is now authenticated
+                val currentUser = auth.currentUser
+                if (currentUser == null || currentUser.uid != userId) {
+                    android.util.Log.e("FirebaseAuth", "Auth state not synced after creation")
+                    return Result.failure(Exception("Authentication failed. Please try again."))
+                }
+                android.util.Log.d("FirebaseAuth", "Auth state verified: ${currentUser.uid}")
+            } else if (userId == null) {
+                return Result.failure(Exception("User not logged in and no password provided"))
+            }
+            
+            // Ensure userId is valid before proceeding
+            if (userId.isEmpty()) {
+                return Result.failure(Exception("Invalid user ID"))
+            }
+            
+            android.util.Log.d("FirebaseAuth", "Proceeding with registration for userId: $userId")
 
-            // Upload files
+            // Upload files - SKIPPED: Firebase Storage requires Blaze plan
+            // Using placeholder URLs instead for development/testing
             val fileUrls = mutableMapOf<String, String>()
             for ((key, uri) in files) {
-                val fileRef = storage.child("seller_applications/$userId/$key")
-                fileRef.putFile(uri).await()
-                val url = fileRef.downloadUrl.await().toString()
-                fileUrls[key] = url
+                android.util.Log.d("FirebaseStorage", "Skipping upload for: $key (Storage requires Blaze plan)")
+                // Use placeholder URL instead of actual upload
+                fileUrls[key] = "placeholder_url_${key}_${userId}"
             }
 
             val completeApplication = application.copy(
@@ -111,14 +228,39 @@ class FirebaseManager {
             val docRef = db.collection("seller_applications").document(userId)
             docRef.set(completeApplication).await()
 
-            // Update user type to seller pending (use set with merge to handle non-existent documents)
-            db.collection("users").document(userId).set(
-                mapOf(
-                    "userType" to UserType.SELLER.name,
-                    "accountStatus" to AccountStatus.PENDING.name
-                ),
-                com.google.firebase.firestore.SetOptions.merge()
-            ).await()
+            // Hash password if provided
+            val hashedPassword = password?.let { PasswordHasher.hashPassword(it) } ?: ""
+
+            // Check if user document exists
+            val userDocRef = db.collection("users").document(userId)
+            val userDoc = userDocRef.get().await()
+            
+            if (userDoc.exists()) {
+                // Update existing user document
+                userDocRef.update(
+                    mapOf<String, Any>(
+                        "userType" to UserType.SELLER.name,
+                        "accountStatus" to AccountStatus.PENDING.name,
+                        "storeEmail" to application.storeEmail
+                    )
+                ).await()
+            } else {
+                // Create new user document
+                userDocRef.set(
+                    mapOf<String, Any>(
+                        "firstName" to application.firstName,
+                        "lastName" to application.lastName,
+                        "email" to application.email,
+                        "storeEmail" to application.storeEmail,
+                        "phoneNumber" to application.phoneNumber,
+                        "password" to hashedPassword,
+                        "userType" to UserType.SELLER.name,
+                        "accountStatus" to AccountStatus.PENDING.name,
+                        "isVerified" to false,
+                        "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    )
+                ).await()
+            }
 
             Result.success(userId)
         } catch (e: Exception) {
@@ -224,7 +366,7 @@ class FirebaseManager {
     suspend fun getAllCustomers(): List<AdminCustomer> {
         return try {
             val snapshot = db.collection("users")
-                .whereEqualTo("userType", "customer")
+                .whereEqualTo("userType", "CUSTOMER")
                 .get()
                 .await()
             snapshot.documents.mapNotNull { doc ->
@@ -449,11 +591,25 @@ class FirebaseManager {
 
     suspend fun getAllSellers(): List<AdminSeller> {
         return try {
-            val snapshot = db.collection("sellers")
+            val snapshot = db.collection("users")
+                .whereEqualTo("userType", "SELLER")
                 .get()
                 .await()
             snapshot.documents.mapNotNull { doc ->
-                doc.toObject(AdminSeller::class.java)?.copy(id = doc.id)
+                doc.toObject(User::class.java)?.let { user ->
+                    AdminSeller(
+                        id = user.id,
+                        sellerId = user.id,
+                        firstName = user.firstName,
+                        lastName = user.lastName,
+                        email = user.email,
+                        phoneNumber = user.phoneNumber,
+                        merchantName = "",  // Will be populated from merchants collection
+                        sellerStatus = (user.accountStatus ?: AccountStatus.ACTIVE).name.lowercase(),
+                        sellerRating = 0.0,
+                        createdAt = user.createdAt?.toString() ?: ""
+                    )
+                }
             }
         } catch (e: Exception) {
             emptyList()
@@ -462,11 +618,23 @@ class FirebaseManager {
 
     suspend fun getAllRiders(): List<AdminRider> {
         return try {
-            val snapshot = db.collection("riders")
+            val snapshot = db.collection("users")
+                .whereEqualTo("userType", "RIDER")
                 .get()
                 .await()
             snapshot.documents.mapNotNull { doc ->
-                doc.toObject(AdminRider::class.java)?.copy(id = doc.id)
+                doc.toObject(User::class.java)?.let { user ->
+                    AdminRider(
+                        id = user.id,
+                        firstName = user.firstName,
+                        lastName = user.lastName,
+                        email = user.email,
+                        phoneNumber = user.phoneNumber,
+                        riderStatus = (user.accountStatus ?: AccountStatus.ACTIVE).name.lowercase(),
+                        riderRating = 0.0,
+                        createdAt = user.createdAt?.toString() ?: ""
+                    )
+                }
             }
         } catch (e: Exception) {
             emptyList()
@@ -474,15 +642,52 @@ class FirebaseManager {
     }
 
     suspend fun getAllRidersWithDocuments(): List<AdminRider> {
-        return getAllRiders()
+        return try {
+            // Get rider applications
+            val applicationsSnapshot = db.collection("rider_applications")
+                .get()
+                .await()
+            
+            applicationsSnapshot.documents.mapNotNull { doc ->
+                try {
+                    val application = doc.toObject(RiderApplication::class.java)
+                    application?.let { app ->
+                        AdminRider(
+                            id = app.userId,
+                            firstName = app.firstName,
+                            lastName = app.lastName,
+                            email = app.email,
+                            phoneNumber = app.phoneNumber,
+                            vehicleType = app.vehicleType,
+                            plateNumber = app.plateNumber,
+                            licenseNumber = app.licenseNumber,
+                            riderStatus = app.status.name.lowercase(),
+                            riderRating = 0.0,
+                            isVerified = false,
+                            licensePhotoUrl = app.licensePhotoUrl,
+                            nbiUrl = app.nbiUrl,
+                            orUrl = app.orUrl,
+                            crUrl = app.crUrl,
+                            createdAt = app.submittedAt?.toString() ?: ""
+                        )
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("FirebaseManager", "Error parsing rider application: ${e.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
+    
     suspend fun updateRider(riderId: String, updates: Map<String, Any>) {
-        updateRecord("riders", riderId, updates)
+        updateRecord("users", riderId, updates)
     }
 
     suspend fun deleteRider(riderId: String) {
-        deleteRecord("riders", riderId)
+        deleteRecord("users", riderId)
     }
 
     suspend fun getActiveMerchantCities(): List<String> {
@@ -625,21 +830,112 @@ class FirebaseManager {
         }
     }
 
+    suspend fun updateSellerStatus(sellerId: String, status: String): Result<Unit> {
+        return try {
+            // Map status to correct enum values
+            val applicationStatus = when (status.uppercase()) {
+                "APPROVED", "ACTIVE" -> ApplicationStatus.APPROVED
+                "REJECTED" -> ApplicationStatus.REJECTED
+                else -> ApplicationStatus.PENDING
+            }
+            
+            val accountStatus = when (status.uppercase()) {
+                "APPROVED", "ACTIVE" -> AccountStatus.ACTIVE
+                "REJECTED" -> AccountStatus.PENDING  // Keep as PENDING, not SUSPENDED
+                "SUSPENDED" -> AccountStatus.SUSPENDED
+                else -> AccountStatus.PENDING
+            }
+            
+            // Update application status
+            db.collection("seller_applications").document(sellerId)
+                .update("status", applicationStatus)
+                .await()
+            
+            // Update user account status
+            db.collection("users").document(sellerId)
+                .update("accountStatus", accountStatus)
+                .await()
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            android.util.Log.e("FirebaseManager", "Error updating seller status: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateRiderStatus(riderId: String, status: String): Result<Unit> {
+        return try {
+            // Map status to correct enum values
+            val applicationStatus = when (status.uppercase()) {
+                "APPROVED", "ACTIVE" -> ApplicationStatus.APPROVED
+                "REJECTED" -> ApplicationStatus.REJECTED
+                else -> ApplicationStatus.PENDING
+            }
+            
+            val accountStatus = when (status.uppercase()) {
+                "APPROVED", "ACTIVE" -> AccountStatus.ACTIVE
+                "REJECTED" -> AccountStatus.PENDING  // Keep as PENDING, not SUSPENDED
+                "SUSPENDED" -> AccountStatus.SUSPENDED
+                else -> AccountStatus.PENDING
+            }
+            
+            // Update application status
+            db.collection("rider_applications").document(riderId)
+                .update("status", applicationStatus)
+                .await()
+            
+            // Update user account status
+            db.collection("users").document(riderId)
+                .update("accountStatus", accountStatus)
+                .await()
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            android.util.Log.e("FirebaseManager", "Error updating rider status: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    
     suspend fun updateSeller(sellerId: String, updates: Map<String, Any>) {
-        updateRecord("sellers", sellerId, updates)
+        updateRecord("users", sellerId, updates)
     }
 
     suspend fun deleteSeller(sellerId: String) {
-        deleteRecord("sellers", sellerId)
+        deleteRecord("users", sellerId)
     }
 
     suspend fun getAllSellersWithMerchants(): List<AdminSeller> {
         return try {
-            val snapshot = db.collection("sellers")
+            // Get seller applications
+            val applicationsSnapshot = db.collection("seller_applications")
                 .get()
                 .await()
-            snapshot.documents.mapNotNull { doc ->
-                doc.toObject(AdminSeller::class.java)?.copy(id = doc.id)
+            
+            applicationsSnapshot.documents.mapNotNull { doc ->
+                try {
+                    val application = doc.toObject(SellerApplication::class.java)
+                    application?.let { app ->
+                        AdminSeller(
+                            id = app.userId,
+                            sellerId = app.userId,
+                            firstName = app.firstName,
+                            lastName = app.lastName,
+                            email = app.email,
+                            phoneNumber = app.phoneNumber,
+                            merchantName = app.storeName,
+                            merchantType = app.storeType,
+                            sellerStatus = app.status.name.lowercase(),
+                            sellerRating = 0.0,
+                            govIdUrl = app.govIdUrl,
+                            birCertUrl = app.birCertUrl,
+                            createdAt = app.submittedAt?.toString() ?: ""
+                        )
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("FirebaseManager", "Error parsing seller application: ${e.message}")
+                    null
+                }
             }
         } catch (e: Exception) {
             emptyList()
@@ -999,13 +1295,44 @@ class FirebaseManager {
         deleteRecord("items", itemId)
     }
 
-    suspend fun uploadItemImage(itemId: String, imageUri: android.net.Uri): String {
+    suspend fun uploadItemImage(itemId: String, category: String, imageUri: android.net.Uri): String {
         return try {
-            val imageRef = storage.child("item_images/$itemId.jpg")
-            imageRef.putFile(imageUri).await()
+            android.util.Log.d("FirebaseStorage", "Uploading item image for: $itemId in category: $category")
+            
+            // Sanitize category name for folder path (replace spaces and special characters)
+            val sanitizedCategory = category
+                .lowercase()
+                .replace(Regex("[^a-z0-9_]"), "_")
+                .replace(Regex("_+"), "_")
+                .trim('_')
+            
+            // Read image from URI
+            val inputStream = context.contentResolver.openInputStream(imageUri)
+            if (inputStream == null) {
+                android.util.Log.e("FirebaseStorage", "Cannot open image file")
+                throw Exception("Cannot read image file")
+            }
+            
+            val imageBytes = inputStream.readBytes()
+            inputStream.close()
+            
+            android.util.Log.d("FirebaseStorage", "Image read: ${imageBytes.size} bytes")
+            
+            // Upload to category-specific folder: item_images/{category}/{itemId}.jpg
+            val imageRef = storage.child("item_images/$sanitizedCategory/$itemId.jpg")
+            val metadata = StorageMetadata.Builder()
+                .setContentType("image/jpeg")
+                .build()
+            
+            // Upload as bytes
+            imageRef.putBytes(imageBytes, metadata).await()
+            
+            android.util.Log.d("FirebaseStorage", "Item image uploaded to: item_images/$sanitizedCategory/$itemId.jpg")
+            
             imageRef.downloadUrl.await().toString()
         } catch (e: Exception) {
-            ""
+            android.util.Log.e("FirebaseStorage", "Failed to upload item image: ${e.message}", e)
+            throw Exception("Failed to upload image: ${e.message}")
         }
     }
 
@@ -1245,6 +1572,103 @@ class FirebaseManager {
 
     suspend fun getAllOrderItems(sellerId: String): List<com.example.pickgo.models.seller.SellerOrder> {
         return getOrderItems(sellerId)
+    }
+
+    private suspend fun uploadRegistrationDocument(basePath: String, key: String, uri: Uri): String {
+        return try {
+            android.util.Log.d("FirebaseStorage", "Starting upload: $basePath/$key from URI: $uri")
+            
+            val resolver = context.contentResolver
+            val mimeType = resolveMimeType(uri)
+            val extension = extensionForMimeType(mimeType, uri)
+
+            // Verify file is accessible and not empty
+            val inputStream = resolver.openInputStream(uri)
+            if (inputStream == null) {
+                throw Exception("Cannot open file. Please try selecting the file again.")
+            }
+            
+            val fileBytes = inputStream.readBytes()
+            inputStream.close()
+            
+            if (fileBytes.isEmpty()) {
+                throw Exception("Selected file is empty")
+            }
+            
+            android.util.Log.d("FirebaseStorage", "File read successfully: ${fileBytes.size} bytes")
+
+            val fileRef = storage.child("$basePath/${key}$extension")
+            val metadata = StorageMetadata.Builder()
+                .setContentType(mimeType)
+                .build()
+
+            android.util.Log.d("FirebaseStorage", "Uploading to: ${fileRef.path}")
+            
+            // Use putBytes instead of putFile for better reliability
+            // Workaround for ControllableTask .await() bug in older coroutines-play-services
+            kotlin.coroutines.suspendCoroutine<com.google.firebase.storage.UploadTask.TaskSnapshot> { cont ->
+                fileRef.putBytes(fileBytes, metadata)
+                    .addOnSuccessListener { cont.resumeWith(Result.success(it)) }
+                    .addOnFailureListener { cont.resumeWith(Result.failure(it)) }
+            }
+            
+            android.util.Log.d("FirebaseStorage", "Upload successful")
+            
+            val downloadUrl = fileRef.downloadUrl.await().toString()
+            android.util.Log.d("FirebaseStorage", "Download URL obtained: $downloadUrl")
+            
+            downloadUrl
+        } catch (e: Exception) {
+            android.util.Log.e("FirebaseStorage", "Upload failed: ${e.message}", e)
+            throw Exception("Failed to upload $key: ${e.message ?: "Unknown error"}. Please check your internet connection and try again.")
+        }
+    }
+
+    private fun resolveMimeType(uri: Uri): String {
+        context.contentResolver.getType(uri)?.let { return it }
+        return when (extensionFromUri(uri)) {
+            ".pdf" -> "application/pdf"
+            ".png" -> "image/png"
+            ".webp" -> "image/webp"
+            ".jpg", ".jpeg" -> "image/jpeg"
+            else -> "image/jpeg"
+        }
+    }
+
+    private fun extensionFromUri(uri: Uri): String {
+        val name = queryDisplayName(uri)?.lowercase() ?: return ""
+        return when {
+            name.endsWith(".pdf") -> ".pdf"
+            name.endsWith(".png") -> ".png"
+            name.endsWith(".webp") -> ".webp"
+            name.endsWith(".jpeg") -> ".jpeg"
+            name.endsWith(".jpg") -> ".jpg"
+            else -> ""
+        }
+    }
+
+    private fun queryDisplayName(uri: Uri): String? {
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (index != -1) {
+                    return cursor.getString(index)
+                }
+            }
+        }
+        return uri.lastPathSegment
+    }
+
+    private fun extensionForMimeType(mimeType: String, uri: Uri): String {
+        extensionFromUri(uri).takeIf { it.isNotEmpty() }?.let { return it }
+        return when {
+            mimeType == "application/pdf" -> ".pdf"
+            mimeType == "image/png" -> ".png"
+            mimeType == "image/webp" -> ".webp"
+            mimeType == "image/jpeg" || mimeType == "image/jpg" -> ".jpg"
+            mimeType.startsWith("image/") -> ".jpg"
+            else -> ".jpg"
+        }
     }
 
     // Helper methods for database operations

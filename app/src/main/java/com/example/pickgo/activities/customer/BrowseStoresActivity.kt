@@ -29,7 +29,7 @@ class BrowseStoresActivity : AppCompatActivity() {
         binding = ActivityBrowseStoresBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        firebaseManager = FirebaseManager()
+        firebaseManager = FirebaseManager(this)
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)

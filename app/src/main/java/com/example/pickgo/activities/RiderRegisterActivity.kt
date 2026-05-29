@@ -31,33 +31,45 @@ class RiderRegisterActivity : AppCompatActivity() {
 
     private val licensePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            licensePhotoUri = result.data?.data
-            binding.licenseStatus.text = "✓ Selected: ${getFileName(licensePhotoUri)}"
-            binding.licenseStatus.visibility = View.VISIBLE
+            result.data?.data?.let { uri ->
+                persistUriPermission(uri)
+                licensePhotoUri = uri
+                binding.licenseStatus.text = "✓ Selected: ${getFileName(licensePhotoUri)}"
+                binding.licenseStatus.visibility = View.VISIBLE
+            }
         }
     }
 
     private val nbiPicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            nbiClearanceUri = result.data?.data
-            binding.nbiStatus.text = "✓ Selected: ${getFileName(nbiClearanceUri)}"
-            binding.nbiStatus.visibility = View.VISIBLE
+            result.data?.data?.let { uri ->
+                persistUriPermission(uri)
+                nbiClearanceUri = uri
+                binding.nbiStatus.text = "✓ Selected: ${getFileName(nbiClearanceUri)}"
+                binding.nbiStatus.visibility = View.VISIBLE
+            }
         }
     }
 
     private val orPicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            orUri = result.data?.data
-            binding.orStatus.text = "✓ Selected: ${getFileName(orUri)}"
-            binding.orStatus.visibility = View.VISIBLE
+            result.data?.data?.let { uri ->
+                persistUriPermission(uri)
+                orUri = uri
+                binding.orStatus.text = "✓ Selected: ${getFileName(orUri)}"
+                binding.orStatus.visibility = View.VISIBLE
+            }
         }
     }
 
     private val crPicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            crUri = result.data?.data
-            binding.crStatus.text = "✓ Selected: ${getFileName(crUri)}"
-            binding.crStatus.visibility = View.VISIBLE
+            result.data?.data?.let { uri ->
+                persistUriPermission(uri)
+                crUri = uri
+                binding.crStatus.text = "✓ Selected: ${getFileName(crUri)}"
+                binding.crStatus.visibility = View.VISIBLE
+            }
         }
     }
 
@@ -66,22 +78,17 @@ class RiderRegisterActivity : AppCompatActivity() {
         binding = ActivityRiderRegisterBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        firebaseManager = FirebaseManager()
-        sessionManager = SessionManager(this)
+        firebaseManager = FirebaseManager(this)
+        try {
+            sessionManager = SessionManager(this)
+        } catch (e: Exception) {
+            // Session manager initialization failed - this is okay for registration
+            android.util.Log.w("RiderRegister", "SessionManager init failed: ${e.message}")
+        }
         setupVehicleTypeSpinner()
         setupClickListeners()
-        autofillUserData()
     }
-    
-    private fun autofillUserData() {
-        val currentUser = sessionManager.getSession()
-        if (currentUser != null) {
-            binding.firstNameInput.setText(currentUser.firstName)
-            binding.lastNameInput.setText(currentUser.lastName)
-            binding.emailInput.setText(currentUser.email)
-            binding.phoneInput.setText(currentUser.phoneNumber)
-        }
-    }
+
 
     private fun setupVehicleTypeSpinner() {
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, vehicleTypes)
@@ -121,12 +128,25 @@ class RiderRegisterActivity : AppCompatActivity() {
     }
 
     private fun pickDocument(launcher: androidx.activity.result.ActivityResultLauncher<Intent>, title: String) {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "*/*"
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
             putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "application/pdf"))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
         }
-        launcher.launch(Intent.createChooser(intent, title))
+        launcher.launch(intent)
+    }
+
+    private fun persistUriPermission(uri: Uri) {
+        try {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        } catch (_: SecurityException) {
+            // Some content providers do not support persistable permissions
+        }
     }
 
     private fun performRegistration() {
@@ -168,7 +188,7 @@ class RiderRegisterActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val result = firebaseManager.submitRiderApplication(application, files)
+                val result = firebaseManager.submitRiderApplication(application, files, password)
                 if (result.isSuccess) {
                     showSuccess("Application submitted successfully! Please wait for approval.")
                     clearForm()
@@ -224,25 +244,26 @@ class RiderRegisterActivity : AppCompatActivity() {
             return false
         }
 
-        if (licensePhotoUri == null) {
-            showError("Please upload your Driver's License photo.")
-            return false
-        }
+        // Document uploads are now optional (Firebase Storage requires Blaze plan)
+        // if (licensePhotoUri == null) {
+        //     showError("Please upload your Driver's License photo.")
+        //     return false
+        // }
 
-        if (nbiClearanceUri == null) {
-            showError("Please upload your NBI Clearance.")
-            return false
-        }
+        // if (nbiClearanceUri == null) {
+        //     showError("Please upload your NBI Clearance.")
+        //     return false
+        // }
 
-        if (orUri == null) {
-            showError("Please upload your Official Receipt (OR).")
-            return false
-        }
+        // if (orUri == null) {
+        //     showError("Please upload your Official Receipt (OR).")
+        //     return false
+        // }
 
-        if (crUri == null) {
-            showError("Please upload your Certificate of Registration (CR).")
-            return false
-        }
+        // if (crUri == null) {
+        //     showError("Please upload your Certificate of Registration (CR).")
+        //     return false
+        // }
 
         if (!termsAccepted) {
             showError("You must agree to the terms and conditions.")
